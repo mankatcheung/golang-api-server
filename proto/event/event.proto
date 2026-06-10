@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package event;
+
+option go_package = "github.com/golang-api-server/proto/event";
+
+message PublishRequest {
+  string type = 1;
+  map<string, string> payload = 2;
+}
+
+message PublishResponse {
+  string id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message ConversionEvent {
+  string from = 1;
+  string to = 2;
+  double amount = 3;
+  double rate = 4;
+  double converted = 5;
+  int64 user_id = 6;
+}
+
+service EventService {
+  rpc PublishConversion(ConversionEvent) returns (PublishResponse);
+  rpc PublishEvent(PublishRequest) returns (PublishResponse);
+}

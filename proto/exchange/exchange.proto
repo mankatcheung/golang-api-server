@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package exchange;
+
+option go_package = "github.com/golang-api-server/proto/exchange";
+
+message ConvertRequest {
+  string from = 1;
+  string to = 2;
+  double amount = 3;
+}
+
+message ConvertResponse {
+  string from = 1;
+  string to = 2;
+  double amount = 3;
+  double rate = 4;
+  double converted = 5;
+}
+
+message RatesRequest {
+  string base = 1;
+}
+
+message RatesResponse {
+  string base = 1;
+  map<string, double> rates = 2;
+}
+
+service ExchangeService {
+  rpc Convert(ConvertRequest) returns (ConvertResponse);
+  rpc GetRates(RatesRequest) returns (RatesResponse);
+}

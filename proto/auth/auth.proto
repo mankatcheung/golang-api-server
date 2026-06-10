@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/golang-api-server/proto/auth";
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message ProfileRequest {
+  int64 user_id = 1;
+}
+
+message AuthResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_at = 3;
+}
+
+message User {
+  int64 id = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message MessageResponse {
+  string message = 1;
+}
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc RefreshToken(RefreshRequest) returns (AuthResponse);
+  rpc GetProfile(ProfileRequest) returns (User);
+  rpc Logout(MessageResponse) returns (MessageResponse);
+}
