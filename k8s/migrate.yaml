@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: golang-api-server
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done"]
+      containers:
+        - name: migrate
+          image: golang-api-server:latest
+          imagePullPolicy: IfNotPresent
+          command: ["./migrate", "up"]
+          envFrom:
+            - configMapRef:
+                name: golang-api-server-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: golang-api-server-secret
+                  key: JWT_SECRET

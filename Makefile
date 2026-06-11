@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean docker-up docker-down dev-up dev-down migrate proto
+.PHONY: build run test lint clean docker-up docker-down dev-up dev-down migrate proto k8s-up k8s-down k8s-build
 
 build:
 	go build -o bin/server ./cmd/api
@@ -58,6 +58,22 @@ proto:
 	protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		proto/event/event.proto
+
+k8s-build:
+	docker build -t golang-api-server:latest .
+
+k8s-up:
+	kubectl apply -f k8s/namespace.yaml
+	kubectl apply -f k8s/secret.yaml
+	kubectl apply -f k8s/configmap.yaml
+	kubectl apply -f k8s/postgres.yaml
+	kubectl apply -f k8s/redis.yaml
+	kubectl apply -f k8s/kafka.yaml
+	kubectl apply -f k8s/migrate.yaml
+	kubectl apply -f k8s/app.yaml
+
+k8s-down:
+	kubectl delete namespace golang-api-server
 
 proto-install-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
