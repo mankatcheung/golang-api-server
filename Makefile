@@ -68,7 +68,6 @@ k8s-up:
 	kubectl apply -f k8s/configmap.yaml
 	kubectl apply -f k8s/postgres.yaml
 	kubectl apply -f k8s/redis.yaml
-	kubectl apply -f k8s/zookeeper.yaml
 	kubectl apply -f k8s/kafka.yaml
 	kubectl apply -f k8s/migrate.yaml
 	kubectl apply -f k8s/app.yaml
