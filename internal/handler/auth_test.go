@@ -58,7 +58,7 @@ func TestAuthHandler_Register(t *testing.T) {
 					}, nil
 				},
 			},
-			body:       model.RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test"},
+			body:       model.RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test", Username: "testuser"},
 			wantStatus: http.StatusCreated,
 		},
 		{
@@ -82,7 +82,7 @@ func TestAuthHandler_Register(t *testing.T) {
 					return nil, service.ErrEmailTaken
 				},
 			},
-			body:       model.RegisterRequest{Email: "taken@example.com", Password: "password123", Name: "Test"},
+			body:       model.RegisterRequest{Email: "taken@example.com", Password: "password123", Name: "Test", Username: "takenuser"},
 			wantStatus: http.StatusConflict,
 		},
 		{
@@ -92,7 +92,7 @@ func TestAuthHandler_Register(t *testing.T) {
 					return nil, errors.New("database error")
 				},
 			},
-			body:       model.RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test"},
+			body:       model.RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test", Username: "erruser"},
 			wantStatus: http.StatusInternalServerError,
 		},
 	}

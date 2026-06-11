@@ -50,6 +50,14 @@ func (m *mockUserRepo) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (m *mockUserRepo) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	return nil, nil
+}
+
+func (m *mockUserRepo) AllEmailsAndUsernames(_ context.Context) ([]string, []string, error) {
+	return nil, nil, nil
+}
+
 func (m *mockUserRepo) List(ctx context.Context, offset, limit int) ([]*model.User, error) {
 	if m.listFunc != nil {
 		return m.listFunc(ctx, offset, limit)

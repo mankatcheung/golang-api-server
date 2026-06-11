@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-api-server/internal/domain"
 	"github.com/golang-api-server/internal/model"
+	"github.com/golang-api-server/pkg/bloom"
 	"github.com/golang-api-server/pkg/jwt"
 	"github.com/golang-api-server/pkg/password"
 )
@@ -27,6 +28,7 @@ type authService struct {
 	jwtSecret     string
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
+	filter        *bloom.Filter
 }
 
 // AuthServiceDeps holds the dependencies required to create an AuthService.
@@ -35,6 +37,7 @@ type AuthServiceDeps struct {
 	JWTSecret     string
 	AccessExpiry  time.Duration
 	RefreshExpiry time.Duration
+	Filter        *bloom.Filter
 }
 
 // NewAuthService returns an AuthService backed by the given dependencies.
@@ -44,6 +47,7 @@ func NewAuthService(deps AuthServiceDeps) AuthService {
 		jwtSecret:     deps.JWTSecret,
 		accessExpiry:  deps.AccessExpiry,
 		refreshExpiry: deps.RefreshExpiry,
+		filter:        deps.Filter,
 	}
 }
 
@@ -62,13 +66,19 @@ func (s *authService) Register(ctx context.Context, req *model.RegisterRequest) 
 	}
 
 	user := &model.User{
-		Email: req.Email,
-		Name:  req.Name,
-		Role:  model.RoleUser,
+		Email:    req.Email,
+		Username: req.Username,
+		Name:     req.Name,
+		Role:     model.RoleUser,
 	}
 
 	if err := s.userRepo.Create(ctx, user, hash); err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
+	}
+
+	if s.filter != nil {
+		s.filter.Add("email:" + req.Email)
+		s.filter.Add("username:" + req.Username)
 	}
 
 	return s.generateTokenPair(user)
@@ -129,6 +139,9 @@ func (s *authService) UpdateProfile(ctx context.Context, userID int64, req *mode
 	}
 	if req.Email != "" {
 		user.Email = req.Email
+	}
+	if req.Username != "" {
+		user.Username = req.Username
 	}
 
 	if err := s.userRepo.Update(ctx, user); err != nil {

@@ -68,6 +68,10 @@ func (m *mockUserService) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (m *mockUserService) CheckAvailability(_ context.Context, _, _ string) (bool, bool, error) {
+	return true, true, nil
+}
+
 type mockExchangeService struct {
 	convertFunc  func(ctx context.Context, req *model.ConvertRequest) (*model.ConvertResponse, error)
 	getRatesFunc func(ctx context.Context, base string) (map[string]float64, error)

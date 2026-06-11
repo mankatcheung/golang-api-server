@@ -142,6 +142,23 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
+func (h *UserHandler) CheckAvailability(c *gin.Context) {
+	var req model.CheckAvailabilityRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query params", "details": err.Error()})
+		return
+	}
+	emailAvail, usernameAvail, err := h.userService.CheckAvailability(c.Request.Context(), req.Email, req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "availability check failed"})
+		return
+	}
+	c.JSON(http.StatusOK, model.CheckAvailabilityResponse{
+		EmailAvailable:    emailAvail,
+		UsernameAvailable: usernameAvail,
+	})
+}
+
 func (h *UserHandler) List(c *gin.Context) {
 	users, err := h.userService.List(c.Request.Context(), 0, 100)
 	if err != nil {

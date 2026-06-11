@@ -179,6 +179,7 @@ func setupRouter(cfg *config.Config, h *httpHandlers) *gin.Engine {
 	auth := v1.Group("/auth")
 	auth.Use(authLimiter.Limit())
 	{
+		auth.GET("/check", h.user.CheckAvailability)
 		auth.POST("/register", h.auth.Register)
 		auth.POST("/login", h.auth.Login)
 		auth.POST("/refresh", h.auth.RefreshToken)

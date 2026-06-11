@@ -78,7 +78,7 @@ func (r *CachingUserRepository) Update(ctx context.Context, user *model.User) er
 	return nil
 }
 
-// cacheUser writes the user to both cache keys with the password field zeroed.
+// cacheUser writes the user to all cache keys with the password field zeroed.
 // The password hash must never be stored in Redis: the model's json:"-" tag would
 // silently drop it on serialisation, causing auth failures on the next cache hit.
 func (r *CachingUserRepository) cacheUser(ctx context.Context, user *model.User) {
@@ -86,6 +86,9 @@ func (r *CachingUserRepository) cacheUser(ctx context.Context, user *model.User)
 	safe.Password = ""
 	cacheSet(ctx, r.cache, userIDCacheKey(safe.ID), &safe, r.ttl)
 	cacheSet(ctx, r.cache, userEmailCacheKey(safe.Email), &safe, r.ttl)
+	if safe.Username != "" {
+		cacheSet(ctx, r.cache, userUsernameCacheKey(safe.Username), &safe, r.ttl)
+	}
 }
 
 func (r *CachingUserRepository) Delete(ctx context.Context, id int64) error {
@@ -101,6 +104,26 @@ func (r *CachingUserRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (r *CachingUserRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	key := userUsernameCacheKey(username)
+	var cached model.User
+	if err := r.cache.Get(ctx, key, &cached); err == nil {
+		return &cached, nil
+	}
+
+	user, err := r.underlying.GetByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	r.cacheUser(ctx, user)
+	return user, nil
+}
+
+func (r *CachingUserRepository) AllEmailsAndUsernames(ctx context.Context) ([]string, []string, error) {
+	return r.underlying.AllEmailsAndUsernames(ctx)
+}
+
 func (r *CachingUserRepository) List(ctx context.Context, offset, limit int) ([]*model.User, error) {
 	return r.underlying.List(ctx, offset, limit)
 }
@@ -111,6 +134,10 @@ func userIDCacheKey(id int64) string {
 
 func userEmailCacheKey(email string) string {
 	return fmt.Sprintf("user:email:%s", email)
+}
+
+func userUsernameCacheKey(username string) string {
+	return fmt.Sprintf("user:username:%s", username)
 }
 
 func cacheSet(ctx context.Context, c cache.Cache, key string, value interface{}, ttl time.Duration) {

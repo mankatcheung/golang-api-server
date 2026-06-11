@@ -14,6 +14,7 @@ import (
 	"github.com/golang-api-server/internal/logger"
 	"github.com/golang-api-server/internal/repository"
 	"github.com/golang-api-server/internal/service"
+	"github.com/golang-api-server/pkg/bloom"
 	"github.com/golang-api-server/pkg/kafka"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -61,8 +62,23 @@ func NewDependencies(cfg *config.Config) (*Dependencies, error) {
 	txManager := database.NewTransactionManager(db)
 	baseUserRepo := repository.NewUserRepository(db)
 	cachedUserRepo := repository.NewCachingUserRepository(baseUserRepo, redisCache, cfg.CacheTTL)
-	userService := service.NewUserService(cachedUserRepo)
-	authService := newAuthService(cfg, baseUserRepo)
+
+	bf := bloom.New(1_000_000, 0.01)
+	emails, usernames, err := baseUserRepo.AllEmailsAndUsernames(context.Background())
+	if err != nil {
+		slog.Warn("bloom filter seed failed, starting empty", "error", err)
+	} else {
+		for _, e := range emails {
+			bf.Add("email:" + e)
+		}
+		for _, u := range usernames {
+			bf.Add("username:" + u)
+		}
+		slog.Info("bloom filter seeded", "entries", len(emails))
+	}
+
+	userService := service.NewUserService(cachedUserRepo, bf)
+	authService := newAuthService(cfg, baseUserRepo, bf)
 
 	baseExchangeClient := exchangeadapter.NewHTTPClient(0)
 	cachedExchangeClient := exchangeadapter.NewCachedHTTPClient(baseExchangeClient, redisCache, cfg.CacheTTL)
@@ -159,11 +175,12 @@ func initKafka(brokers []string, topic string) (service.MessageProducer, error) 
 	return kafka.NewProducer(brokers, topic), nil
 }
 
-func newAuthService(cfg *config.Config, userRepo service.UserRepository) service.AuthService {
+func newAuthService(cfg *config.Config, userRepo service.UserRepository, bf *bloom.Filter) service.AuthService {
 	return service.NewAuthService(service.AuthServiceDeps{
 		UserRepo:      userRepo,
 		JWTSecret:     cfg.JWTSecret,
 		AccessExpiry:  cfg.JWTAccessExpiry,
 		RefreshExpiry: cfg.JWTRefreshExpiry,
+		Filter:        bf,
 	})
 }

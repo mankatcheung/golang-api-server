@@ -8,6 +8,7 @@ import (
 	"github.com/golang-api-server/internal/domain"
 	"github.com/golang-api-server/internal/model"
 	"github.com/golang-api-server/internal/service"
+	"github.com/golang-api-server/pkg/bloom"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +57,7 @@ func TestUserService_List(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := service.NewUserService(tt.repo)
+			svc := service.NewUserService(tt.repo, bloom.New(100, 0.01))
 			users, err := svc.List(context.Background(), 0, 100)
 
 			if tt.wantErr {
@@ -111,7 +112,7 @@ func TestUserService_Delete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := service.NewUserService(tt.repo)
+			svc := service.NewUserService(tt.repo, bloom.New(100, 0.01))
 			err := svc.Delete(context.Background(), tt.id)
 
 			if tt.wantErr != nil {

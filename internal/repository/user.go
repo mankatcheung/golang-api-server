@@ -62,11 +62,43 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*mod
 	return user, nil
 }
 
+func (r *UserRepositoryImpl) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	db := database.TXFromContext(ctx, r.db)
+	user := &model.User{}
+	result := db.WithContext(ctx).Where("username = ?", username).First(user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, fmt.Errorf("get user by username %s: %w", username, result.Error)
+	}
+	return user, nil
+}
+
+func (r *UserRepositoryImpl) AllEmailsAndUsernames(ctx context.Context) ([]string, []string, error) {
+	var rows []struct {
+		Email    string
+		Username string
+	}
+	result := r.db.WithContext(ctx).Model(&model.User{}).Select("email, username").Scan(&rows)
+	if result.Error != nil {
+		return nil, nil, fmt.Errorf("fetch all emails and usernames: %w", result.Error)
+	}
+	emails := make([]string, len(rows))
+	usernames := make([]string, len(rows))
+	for i, row := range rows {
+		emails[i] = row.Email
+		usernames[i] = row.Username
+	}
+	return emails, usernames, nil
+}
+
 func (r *UserRepositoryImpl) Update(ctx context.Context, user *model.User) error {
 	db := database.TXFromContext(ctx, r.db)
 	result := db.WithContext(ctx).Model(user).Updates(map[string]interface{}{
-		"name":  user.Name,
-		"email": user.Email,
+		"name":     user.Name,
+		"email":    user.Email,
+		"username": user.Username,
 	})
 	if result.Error != nil {
 		return fmt.Errorf("update user %d: %w", user.ID, result.Error)

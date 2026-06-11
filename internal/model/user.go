@@ -13,6 +13,7 @@ const (
 type User struct {
 	ID        int64     `json:"id" gorm:"column:id;primaryKey"`
 	Email     string    `json:"email" gorm:"column:email;uniqueIndex"`
+	Username  string    `json:"username" gorm:"column:username;uniqueIndex"`
 	Password  string    `json:"-" gorm:"column:password"`
 	Name      string    `json:"name" gorm:"column:name"`
 	Role      Role      `json:"role" gorm:"column:role"`
@@ -26,9 +27,10 @@ func (User) TableName() string {
 }
 
 type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
+	Email    string `json:"email"    binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8,max=72"`
-	Name     string `json:"name" binding:"required,min=1,max=100"`
+	Name     string `json:"name"     binding:"required,min=1,max=100"`
+	Username string `json:"username" binding:"required,min=3,max=50,alphanum"`
 }
 
 type LoginRequest struct {
@@ -41,8 +43,9 @@ type RefreshRequest struct {
 }
 
 type UpdateProfileRequest struct {
-	Name  string `json:"name" binding:"omitempty,min=1,max=100"`
-	Email string `json:"email" binding:"omitempty,email"`
+	Name     string `json:"name"     binding:"omitempty,min=1,max=100"`
+	Email    string `json:"email"    binding:"omitempty,email"`
+	Username string `json:"username" binding:"omitempty,min=3,max=50,alphanum"`
 }
 
 type AuthResponse struct {
@@ -58,4 +61,14 @@ type MessageResponse struct {
 type ErrorResponse struct {
 	Error   string `json:"error"`
 	Details string `json:"details,omitempty"`
+}
+
+type CheckAvailabilityRequest struct {
+	Email    string `form:"email"    binding:"omitempty,email"`
+	Username string `form:"username" binding:"omitempty,min=3,max=50,alphanum"`
+}
+
+type CheckAvailabilityResponse struct {
+	EmailAvailable    bool `json:"email_available"`
+	UsernameAvailable bool `json:"username_available"`
 }
