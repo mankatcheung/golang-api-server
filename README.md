@@ -49,6 +49,32 @@ docker compose run --rm migrate up
 
 The API server starts on `:8080` (HTTP) and `:9090` (gRPC).
 
+### Kubernetes (local)
+
+Requires a local cluster (Docker Desktop, minikube, etc.) with `kubectl` configured.
+
+```bash
+# 1. Build the image into the local Docker daemon
+make k8s-build
+
+# 2. Deploy all services, migrations, and the app
+make k8s-up
+
+# 3. Wait for pods to be ready
+kubectl get pods -n golang-api-server -w
+```
+
+The API is exposed via NodePort:
+- HTTP → `http://localhost:30080`
+- gRPC → `localhost:30090`
+
+Before deploying to a real cluster, update `k8s/secret.yaml` with a strong `JWT_SECRET` and push the image to a registry (update `image:` in `k8s/app.yaml` and `k8s/migrate.yaml` accordingly).
+
+To tear everything down:
+```bash
+make k8s-down
+```
+
 ### Local Development
 
 1. Start PostgreSQL and Kafka locally
