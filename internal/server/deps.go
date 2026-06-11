@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	exchangeadapter "github.com/golang-api-server/internal/adapter/exchange"
 	"github.com/golang-api-server/internal/cache"
@@ -16,6 +17,7 @@ import (
 	"github.com/golang-api-server/pkg/kafka"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/plugin/dbresolver"
 )
 
 type Dependencies struct {
@@ -36,7 +38,7 @@ type Dependencies struct {
 }
 
 func NewDependencies(cfg *config.Config) (*Dependencies, error) {
-	db, err := initDatabase(cfg.DatabaseURL)
+	db, err := initDatabase(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -118,10 +120,18 @@ func (d *Dependencies) Close() {
 	}
 }
 
-func initDatabase(databaseURL string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+func initDatabase(cfg *config.Config) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
+	}
+
+	if err := db.Use(dbresolver.Register(dbresolver.Config{
+		Sources:  []gorm.Dialector{postgres.Open(cfg.DatabaseURL)},
+		Replicas: []gorm.Dialector{postgres.Open(cfg.DatabaseReadURL)},
+		Policy:   dbresolver.RandomPolicy{},
+	})); err != nil {
+		return nil, fmt.Errorf("configure db resolver: %w", err)
 	}
 
 	sqlDB, err := db.DB()
@@ -132,6 +142,11 @@ func initDatabase(databaseURL string) (*gorm.DB, error) {
 	if err := sqlDB.PingContext(context.Background()); err != nil {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
+
+	sqlDB.SetMaxOpenConns(int(cfg.DBMaxConns))
+	sqlDB.SetMaxIdleConns(int(cfg.DBMinConns))
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
 	slog.Info("connected to database")
 
 	return db, nil

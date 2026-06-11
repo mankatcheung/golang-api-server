@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean docker-up docker-down dev-up dev-down migrate proto k8s-up k8s-down k8s-build
+.PHONY: build run test lint clean docker-up docker-down dev-up dev-down migrate proto k8s-up k8s-down k8s-build cnpg-install
 
 build:
 	go build -o bin/server ./cmd/api
@@ -62,7 +62,13 @@ proto:
 k8s-build:
 	docker build -t golang-api-server:latest .
 
+cnpg-install:
+	kubectl apply --server-side \
+		-f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.24/releases/cnpg-1.24.0.yaml
+	kubectl rollout status deployment/cnpg-controller-manager -n cnpg-system --timeout=120s
+
 k8s-up:
+	$(MAKE) cnpg-install
 	kubectl apply -f k8s/namespace.yaml
 	kubectl apply -f k8s/secret.yaml
 	kubectl apply -f k8s/configmap.yaml

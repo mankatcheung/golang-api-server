@@ -18,6 +18,7 @@ type Config struct {
 	ServerAddress    string
 	ServerTimeout    time.Duration
 	DatabaseURL      string
+	DatabaseReadURL  string
 	DBMaxConns       int32
 	DBMinConns       int32
 	JWTSecret        string
@@ -49,10 +50,11 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		AppEnv:         getEnv("APP_ENV", "development"),
-		ServerAddress:  getEnv("SERVER_ADDRESS", ":8080"),
-		DatabaseURL:    getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/users_db?sslmode=disable"),
-		JWTSecret:      getEnv("JWT_SECRET", defaultJWTSecret),
+		AppEnv:          getEnv("APP_ENV", "development"),
+		ServerAddress:   getEnv("SERVER_ADDRESS", ":8080"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/users_db?sslmode=disable"),
+		DatabaseReadURL: getEnv("DATABASE_READ_URL", "postgres://postgres:postgres@localhost:5432/users_db?sslmode=disable"),
+		JWTSecret:       getEnv("JWT_SECRET", defaultJWTSecret),
 		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "*"),
 		GRPCAddress:    getEnv("GRPC_ADDRESS", ":9090"),
 	}

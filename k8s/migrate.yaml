@@ -11,7 +11,7 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: busybox
-          command: ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done"]
+          command: ["sh", "-c", "until nc -z postgres-rw 5432; do echo waiting for postgres; sleep 2; done"]
       containers:
         - name: migrate
           image: golang-api-server:latest
