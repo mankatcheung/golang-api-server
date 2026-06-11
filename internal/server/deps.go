@@ -56,7 +56,7 @@ func NewDependencies(cfg *config.Config) (*Dependencies, error) {
 	consumerStart := consumer.StartConversionConsumer(cfg.KafkaBrokers, cfg.KafkaTopic, cfg.KafkaGroupID)
 	logConsumer := consumer.StartLogConsumer(cfg.KafkaBrokers, cfg.LogKafkaTopic, cfg.LogKafkaGroupID, db)
 
-	redisCache := cache.NewRedisCache(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	redisCache := cache.NewRedisCache(cfg.RedisAddrs, cfg.RedisPassword, cfg.RedisDB)
 
 	txManager := database.NewTransactionManager(db)
 	baseUserRepo := repository.NewUserRepository(db)

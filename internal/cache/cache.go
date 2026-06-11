@@ -19,13 +19,14 @@ type Cache interface {
 }
 
 type RedisCache struct {
-	client *redis.Client
+	client redis.UniversalClient
 }
 
-// NewRedisCache returns a Cache backed by Redis.
-func NewRedisCache(addr, password string, db int) Cache {
-	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
+// NewRedisCache returns a Cache backed by Redis. When addrs contains more than
+// one address a ClusterClient is created; otherwise a single-node client is used.
+func NewRedisCache(addrs []string, password string, db int) Cache {
+	client := redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:    addrs,
 		Password: password,
 		DB:       db,
 	})
@@ -59,9 +60,18 @@ func (c *RedisCache) Delete(ctx context.Context, keys ...string) error {
 }
 
 func (c *RedisCache) DeletePattern(ctx context.Context, pattern string) error {
-	iter := c.client.Scan(ctx, 0, pattern, 100).Iterator()
+	if cluster, ok := c.client.(*redis.ClusterClient); ok {
+		return cluster.ForEachMaster(ctx, func(ctx context.Context, master *redis.Client) error {
+			return scanAndDelete(ctx, master, pattern)
+		})
+	}
+	return scanAndDelete(ctx, c.client, pattern)
+}
+
+func scanAndDelete(ctx context.Context, client redis.Cmdable, pattern string) error {
+	iter := client.Scan(ctx, 0, pattern, 100).Iterator()
 	for iter.Next(ctx) {
-		if err := c.client.Del(ctx, iter.Val()).Err(); err != nil {
+		if err := client.Del(ctx, iter.Val()).Err(); err != nil {
 			return fmt.Errorf("redis del %s: %w", iter.Val(), err)
 		}
 	}

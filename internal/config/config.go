@@ -29,7 +29,7 @@ type Config struct {
 	KafkaTopic       string
 	KafkaGroupID     string
 	GRPCAddress      string
-	RedisAddr        string
+	RedisAddrs       []string
 	RedisPassword    string
 	RedisDB          int
 	CacheTTL         time.Duration
@@ -102,7 +102,7 @@ func Load() (*Config, error) {
 	cfg.KafkaTopic = getEnv("KAFKA_TOPIC", "conversions")
 	cfg.KafkaGroupID = getEnv("KAFKA_GROUP_ID", "api-server")
 
-	cfg.RedisAddr = getEnv("REDIS_ADDR", "localhost:6379")
+	cfg.RedisAddrs = splitCSV(getEnv("REDIS_ADDRS", "localhost:6379"))
 	cfg.RedisPassword = getEnv("REDIS_PASSWORD", "")
 
 	if redisDB, e := strconv.Atoi(getEnv("REDIS_DB", "0")); e != nil {
