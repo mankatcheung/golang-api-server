@@ -125,3 +125,119 @@ func TestUserService_Delete(t *testing.T) {
 		})
 	}
 }
+
+func TestUserService_CheckAvailability(t *testing.T) {
+	const (
+		takenEmail    = "taken@example.com"
+		takenUsername = "takenuser"
+	)
+
+	tests := []struct {
+		name              string
+		repo              *mockUserRepo
+		filterSetup       func(*bloom.Filter)
+		email             string
+		username          string
+		wantEmailAvail    bool
+		wantUsernameAvail bool
+		wantErr           bool
+	}{
+		{
+			name:              "email not in bloom, no DB call",
+			repo:              &mockUserRepo{},
+			filterSetup:       func(_ *bloom.Filter) {},
+			email:             takenEmail,
+			wantEmailAvail:    true,
+			wantUsernameAvail: true,
+		},
+		{
+			name: "email in bloom, DB confirms taken",
+			repo: &mockUserRepo{
+				getByEmailFunc: func(_ context.Context, _ string) (*model.User, error) {
+					return &model.User{ID: 1, Email: takenEmail}, nil
+				},
+			},
+			filterSetup: func(f *bloom.Filter) {
+				f.Add("email:" + takenEmail)
+			},
+			email:             takenEmail,
+			wantEmailAvail:    false,
+			wantUsernameAvail: true,
+		},
+		{
+			name: "email in bloom, DB says not found (false positive)",
+			repo: &mockUserRepo{
+				getByEmailFunc: func(_ context.Context, _ string) (*model.User, error) {
+					return nil, domain.ErrNotFound
+				},
+			},
+			filterSetup: func(f *bloom.Filter) {
+				f.Add("email:" + takenEmail)
+			},
+			email:             takenEmail,
+			wantEmailAvail:    true,
+			wantUsernameAvail: true,
+		},
+		{
+			name:              "username not in bloom, no DB call",
+			repo:              &mockUserRepo{},
+			filterSetup:       func(_ *bloom.Filter) {},
+			username:          takenUsername,
+			wantEmailAvail:    true,
+			wantUsernameAvail: true,
+		},
+		{
+			name: "username in bloom, DB confirms taken",
+			repo: &mockUserRepo{
+				getByUsernameFunc: func(_ context.Context, _ string) (*model.User, error) {
+					return &model.User{ID: 1, Username: takenUsername}, nil
+				},
+			},
+			filterSetup: func(f *bloom.Filter) {
+				f.Add("username:" + takenUsername)
+			},
+			username:          takenUsername,
+			wantEmailAvail:    true,
+			wantUsernameAvail: false,
+		},
+		{
+			name: "DB error on email bloom hit",
+			repo: &mockUserRepo{
+				getByEmailFunc: func(_ context.Context, _ string) (*model.User, error) {
+					return nil, errors.New("db error")
+				},
+			},
+			filterSetup: func(f *bloom.Filter) {
+				f.Add("email:" + takenEmail)
+			},
+			email:   takenEmail,
+			wantErr: true,
+		},
+		{
+			name:              "empty params, both available",
+			repo:              &mockUserRepo{},
+			filterSetup:       func(_ *bloom.Filter) {},
+			wantEmailAvail:    true,
+			wantUsernameAvail: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := bloom.New(100, 0.01)
+			tt.filterSetup(f)
+			svc := service.NewUserService(tt.repo, f)
+
+			emailAvail, usernameAvail, err := svc.CheckAvailability(context.Background(), tt.email, tt.username)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantEmailAvail, emailAvail)
+			assert.Equal(t, tt.wantUsernameAvail, usernameAvail)
+		})
+	}
+}

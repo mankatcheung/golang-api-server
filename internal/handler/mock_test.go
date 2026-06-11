@@ -50,8 +50,9 @@ func (m *mockAuthService) UpdateProfile(ctx context.Context, userID int64, req *
 }
 
 type mockUserService struct {
-	listFunc   func(ctx context.Context, offset, limit int) ([]*model.User, error)
-	deleteFunc func(ctx context.Context, id int64) error
+	listFunc                func(ctx context.Context, offset, limit int) ([]*model.User, error)
+	deleteFunc              func(ctx context.Context, id int64) error
+	checkAvailabilityFunc   func(ctx context.Context, email, username string) (bool, bool, error)
 }
 
 func (m *mockUserService) List(ctx context.Context, offset, limit int) ([]*model.User, error) {
@@ -68,7 +69,10 @@ func (m *mockUserService) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (m *mockUserService) CheckAvailability(_ context.Context, _, _ string) (bool, bool, error) {
+func (m *mockUserService) CheckAvailability(ctx context.Context, email, username string) (bool, bool, error) {
+	if m.checkAvailabilityFunc != nil {
+		return m.checkAvailabilityFunc(ctx, email, username)
+	}
 	return true, true, nil
 }
 

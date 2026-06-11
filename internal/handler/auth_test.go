@@ -35,6 +35,7 @@ func setupUserRouter(userSvc service.UserService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	h := handler.NewUserHandler(userSvc)
+	r.GET("/auth/check", h.CheckAvailability)
 	r.GET("/admin/users", h.List)
 	r.DELETE("/admin/users/:id", h.Delete)
 	return r
@@ -427,6 +428,95 @@ func TestUserHandler_Delete(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
+		})
+	}
+}
+
+func TestUserHandler_CheckAvailability(t *testing.T) {
+	tests := []struct {
+		name       string
+		mock       *mockUserService
+		query      string
+		wantStatus int
+		wantBody   model.CheckAvailabilityResponse
+	}{
+		{
+			name: "both available",
+			mock: &mockUserService{
+				checkAvailabilityFunc: func(_ context.Context, _, _ string) (bool, bool, error) {
+					return true, true, nil
+				},
+			},
+			query:      "?email=new@example.com&username=newuser",
+			wantStatus: http.StatusOK,
+			wantBody:   model.CheckAvailabilityResponse{EmailAvailable: true, UsernameAvailable: true},
+		},
+		{
+			name: "email taken",
+			mock: &mockUserService{
+				checkAvailabilityFunc: func(_ context.Context, _, _ string) (bool, bool, error) {
+					return false, true, nil
+				},
+			},
+			query:      "?email=taken@example.com&username=newuser",
+			wantStatus: http.StatusOK,
+			wantBody:   model.CheckAvailabilityResponse{EmailAvailable: false, UsernameAvailable: true},
+		},
+		{
+			name: "username taken",
+			mock: &mockUserService{
+				checkAvailabilityFunc: func(_ context.Context, _, _ string) (bool, bool, error) {
+					return true, false, nil
+				},
+			},
+			query:      "?username=takenuser",
+			wantStatus: http.StatusOK,
+			wantBody:   model.CheckAvailabilityResponse{EmailAvailable: true, UsernameAvailable: false},
+		},
+		{
+			name: "both taken",
+			mock: &mockUserService{
+				checkAvailabilityFunc: func(_ context.Context, _, _ string) (bool, bool, error) {
+					return false, false, nil
+				},
+			},
+			query:      "?email=taken@example.com&username=takenuser",
+			wantStatus: http.StatusOK,
+			wantBody:   model.CheckAvailabilityResponse{EmailAvailable: false, UsernameAvailable: false},
+		},
+		{
+			name: "service error",
+			mock: &mockUserService{
+				checkAvailabilityFunc: func(_ context.Context, _, _ string) (bool, bool, error) {
+					return false, false, errors.New("db error")
+				},
+			},
+			query:      "?email=test@example.com",
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
+			name:       "invalid email format",
+			mock:       &mockUserService{},
+			query:      "?email=notanemail",
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := setupUserRouter(tt.mock)
+
+			req := httptest.NewRequest(http.MethodGet, "/auth/check"+tt.query, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+
+			if tt.wantStatus == http.StatusOK {
+				var resp model.CheckAvailabilityResponse
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+				assert.Equal(t, tt.wantBody, resp)
+			}
 		})
 	}
 }

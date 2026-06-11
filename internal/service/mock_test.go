@@ -7,12 +7,13 @@ import (
 )
 
 type mockUserRepo struct {
-	createFunc     func(ctx context.Context, user *model.User, passwordHash string) error
-	getByIDFunc    func(ctx context.Context, id int64) (*model.User, error)
-	getByEmailFunc func(ctx context.Context, email string) (*model.User, error)
-	updateFunc     func(ctx context.Context, user *model.User) error
-	deleteFunc     func(ctx context.Context, id int64) error
-	listFunc       func(ctx context.Context, offset, limit int) ([]*model.User, error)
+	createFunc          func(ctx context.Context, user *model.User, passwordHash string) error
+	getByIDFunc         func(ctx context.Context, id int64) (*model.User, error)
+	getByEmailFunc      func(ctx context.Context, email string) (*model.User, error)
+	getByUsernameFunc   func(ctx context.Context, username string) (*model.User, error)
+	updateFunc          func(ctx context.Context, user *model.User) error
+	deleteFunc          func(ctx context.Context, id int64) error
+	listFunc            func(ctx context.Context, offset, limit int) ([]*model.User, error)
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, user *model.User, passwordHash string) error {
@@ -51,6 +52,9 @@ func (m *mockUserRepo) Delete(ctx context.Context, id int64) error {
 }
 
 func (m *mockUserRepo) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	if m.getByUsernameFunc != nil {
+		return m.getByUsernameFunc(ctx, username)
+	}
 	return nil, nil
 }
 
