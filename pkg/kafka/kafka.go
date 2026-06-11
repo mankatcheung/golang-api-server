@@ -108,7 +108,7 @@ func EnsureTopic(brokers []string, topic string, partitions int) error {
 		{
 			Topic:             topic,
 			NumPartitions:     partitions,
-			ReplicationFactor: 1,
+			ReplicationFactor: 3,
 		},
 	}
 

@@ -19,7 +19,7 @@ data:
   REDIS_PASSWORD: ""
   REDIS_DB: "0"
   CACHE_TTL: "600"
-  KAFKA_BROKERS: "kafka:9092"
+  KAFKA_BROKERS: "kafka-0.kafka-headless:9092,kafka-1.kafka-headless:9092,kafka-2.kafka-headless:9092"
   KAFKA_TOPIC: "conversions"
   KAFKA_GROUP_ID: "api-server"
   LOG_LEVEL: "info"
