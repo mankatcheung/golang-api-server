@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: golang-api-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      containers:
+        - name: pgbouncer
+          image: pgbouncer/pgbouncer:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: DATABASES_HOST
+              value: postgres-rw
+            - name: DATABASES_PORT
+              value: "5432"
+            - name: DATABASES_DATABASE
+              value: users_db
+            - name: DATABASES_USER
+              value: postgres
+            - name: DATABASES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: PGBOUNCER_POOL_MODE
+              value: transaction
+            - name: PGBOUNCER_MAX_CLIENT_CONN
+              value: "1000"
+            - name: PGBOUNCER_DEFAULT_POOL_SIZE
+              value: "20"
+            - name: PGBOUNCER_SERVER_RESET_QUERY
+              value: DISCARD ALL
+            - name: PGBOUNCER_IGNORE_STARTUP_PARAMETERS
+              value: extra_float_digits
+            - name: PGBOUNCER_LISTEN_PORT
+              value: "5432"
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer
+  namespace: golang-api-server
+spec:
+  selector:
+    app: pgbouncer
+  ports:
+    - port: 5432
+      targetPort: 5432
